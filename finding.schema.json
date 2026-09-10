@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/finding.schema.json",
+  "title": "Finding",
+  "description": "A single structured finding produced by the evaluation agent. Location/concern/control_gap/severity/confidence/verification are kept as independent axes per design-doc §11 — never collapsed into one field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "app_type",
+    "location",
+    "concerns",
+    "classification",
+    "evidence",
+    "severity",
+    "confidence",
+    "verification"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable identifier, e.g. SEC-017, IMPL-003.",
+      "pattern": "^[A-Z][A-Z0-9_]*-[0-9]+$"
+    },
+
+    "app_type": {
+      "type": "string",
+      "description": "Which vocabulary was used to populate location.component (traditional vs agentic app).",
+      "enum": ["traditional", "agentic"]
+    },
+
+    "location": {
+      "type": "object",
+      "description": "Where the defect lives. 'category' is the coarse-grained bucket; 'component'/'module' are free-text specifics.",
+      "additionalProperties": false,
+      "required": ["category", "component"],
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "agent_loop",
+            "orchestration",
+            "evaluation",
+            "tooling",
+            "application",
+            "data",
+            "infrastructure"
+          ]
+        },
+        "component": {
+          "type": "string",
+          "description": "Free-text specific component, e.g. 'tool_execution', 'auth_middleware'.",
+          "minLength": 1
+        },
+        "module": {
+          "type": "string",
+          "description": "Optional finer-grained module/file, e.g. 'database_tool'.",
+          "minLength": 1
+        }
+      }
+    },
+
+    "concerns": {
+      "type": "array",
+      "description": "What property is violated. A finding may implicate more than one.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "reliability",
+          "security",
+          "observability",
+          "latency",
+          "cost",
+          "correctness",
+          "safety"
+        ]
+      }
+    },
+
+    "control_gap": {
+      "type": "object",
+      "description": "Whether a process/authorization safeguard is missing. Omit keys that don't apply; do not include false-only filler.",
+      "additionalProperties": false,
+      "properties": {
+        "human_in_the_loop": { "type": "boolean" },
+        "authorization": { "type": "boolean" },
+        "validation": { "type": "boolean" },
+        "approval": { "type": "boolean" }
+      },
+      "minProperties": 1
+    },
+
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "implementation_bug",
+            "architecture_defect",
+            "flaky_test",
+            "test_defect",
+            "security_issue"
+          ]
+        }
+      }
+    },
+
+    "evidence": {
+      "type": "array",
+      "description": "What was actually observed. Never optional, never empty — a finding with no evidence is a hypothesis, not a finding.",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "description": "Structured evidence, e.g. flaky-test repetition data.",
+            "minProperties": 1
+          }
+        ]
+      }
+    },
+
+    "hypotheses": {
+      "type": "array",
+      "description": "What the agent believes caused the observed evidence. Not required to be true.",
+      "items": { "type": "string", "minLength": 1 },
+      "default": []
+    },
+
+    "investigations": {
+      "type": "array",
+      "description": "What the agent actually did to test a hypothesis (reproduction steps, isolation, etc). Required before root_cause.status may be 'confirmed'.",
+      "items": { "type": "string", "minLength": 1 },
+      "default": []
+    },
+
+    "root_cause": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "unconfirmed", "inconclusive"]
+        },
+        "explanation": { "type": "string", "minLength": 1 }
+      },
+      "required": ["status"],
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "confirmed" } }
+          },
+          "then": {
+            "required": ["explanation"]
+          }
+        }
+      ]
+    },
+
+    "severity": {
+      "type": "string",
+      "description": "Impact, independent of how sure we are (see confidence).",
+      "enum": ["P0", "P1", "P2", "P3"]
+    },
+
+    "confidence": {
+      "type": "number",
+      "description": "Derived from verification.status per design-doc §6 — never a freely self-reported model value.",
+      "minimum": 0,
+      "maximum": 1
+    },
+
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "reproduced",
+            "reproduced_intermittently",
+            "hypothesis_only",
+            "single_observation"
+          ]
+        }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "$comment": "root_cause.status='confirmed' requires at least one investigation entry (design-doc §5).",
+      "if": {
+        "properties": {
+          "root_cause": {
+            "properties": { "status": { "const": "confirmed" } }
+          }
+        },
+        "required": ["root_cause"]
+      },
+      "then": {
+        "properties": {
+          "investigations": { "minItems": 1 }
+        },
+        "required": ["investigations"]
+      }
+    },
+    {
+      "$comment": "confidence must fall within the band implied by verification.status (design-doc §6 table). Bands, not exact values, to allow calibration.",
+      "if": { "properties": { "verification": { "properties": { "status": { "const": "reproduced" } } } } },
+      "then": { "properties": { "confidence": { "minimum": 0.85, "maximum": 1.0 } } }
+    },
+    {
+      "if": { "properties": { "verification": { "properties": { "status": { "const": "reproduced_intermittently" } } } } },
+      "then": { "properties": { "confidence": { "minimum": 0.45, "maximum": 0.75 } } }
+    },
+    {
+      "if": { "properties": { "verification": { "properties": { "status": { "const": "hypothesis_only" } } } } },
+      "then": { "properties": { "confidence": { "minimum": 0.15, "maximum": 0.45 } } }
+    },
+    {
+      "if": { "properties": { "verification": { "properties": { "status": { "const": "single_observation" } } } } },
+      "then": { "properties": { "confidence": { "minimum": 0.1, "maximum": 0.35 } } }
+    },
+    {
+      "$comment": "flaky_test classification should not carry root_cause.status='confirmed' about the application being defective — flakiness itself is the finding.",
+      "if": {
+        "properties": {
+          "classification": { "properties": { "type": { "const": "flaky_test" } } }
+        }
+      },
+      "then": {
+        "properties": {
+          "root_cause": {
+            "properties": {
+              "status": { "enum": ["unconfirmed", "inconclusive"] }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
