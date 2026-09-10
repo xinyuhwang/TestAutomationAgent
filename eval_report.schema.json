@@ -53,7 +53,88 @@
             "runtime_seconds": { "type": "number", "minimum": 0 },
             "test_cases": { "type": "integer", "minimum": 0 },
             "retries": { "type": "integer", "minimum": 0 },
-            "cost_usd": { "type": "number", "minimum": 0 }
+            "cost_usd": { "type": "number", "minimum": 0 },
+            "unmeasured": {
+              "type": "array",
+              "description": "Counters this run could not observe. Without this, an absent cost_usd is indistinguishable from a run that genuinely cost nothing — so a missing counter must be declared rather than defaulted to zero.",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": ["steps", "llm_calls", "runtime_seconds", "test_cases", "retries", "cost_usd"]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "skill_spans": {
+      "type": "array",
+      "description": "Per-skill breakdown of one run (design-doc §10). Flat budget.used totals cannot answer 'which skill triggered the retry loop' or 'how many tests were generated but never executed'; these spans can.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skill", "status"],
+        "properties": {
+          "skill": {
+            "type": "string",
+            "enum": [
+              "test-case-generation",
+              "adversarial-testing",
+              "defect-to-architecture-tracing",
+              "security-review",
+              "integration-coordination",
+              "eval-doc-generation"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["completed", "budget_exhausted", "error"]
+          },
+          "duration_seconds": { "type": "number", "minimum": 0 },
+          "llm_calls": { "type": "integer", "minimum": 0 },
+          "tokens_in": { "type": "integer", "minimum": 0 },
+          "tokens_out": { "type": "integer", "minimum": 0 },
+          "cost_usd": { "type": "number", "minimum": 0 },
+
+          "tool_calls": {
+            "type": "array",
+            "description": "Retry counts live here, which is what makes a retry loop attributable to a specific skill.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tool"],
+              "properties": {
+                "tool": { "type": "string", "minLength": 1 },
+                "summary": { "type": "string", "minLength": 1 },
+                "retries": { "type": "integer", "minimum": 0 },
+                "duration_seconds": { "type": "number", "minimum": 0 }
+              }
+            }
+          },
+
+          "tests_generated": {
+            "type": "integer",
+            "description": "Tests this skill produced. Compare against tests_executed: a gap means tests were generated and never run, which is a silent failure mode rather than a smaller bill.",
+            "minimum": 0
+          },
+          "tests_executed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["test_id", "result"],
+              "properties": {
+                "test_id": { "type": "string", "minLength": 1 },
+                "result": {
+                  "type": "string",
+                  "enum": ["passed", "failed", "error", "skipped"]
+                },
+                "repetitions": { "type": "integer", "minimum": 1 },
+                "failures": { "type": "integer", "minimum": 0 },
+                "duration_seconds": { "type": "number", "minimum": 0 }
+              }
+            }
           }
         }
       }
