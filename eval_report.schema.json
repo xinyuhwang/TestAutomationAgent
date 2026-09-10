@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/eval-report.schema.json",
+  "title": "EvalReport",
+  "description": "Full output of one agent run: metadata, budget outcome, findings, and new/known/regression classification against the baseline findings.json (design-doc §12, §16).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "trigger", "app_type", "status", "findings"],
+  "properties": {
+    "run_id": { "type": "string", "minLength": 1 },
+    "trace_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+
+    "trigger": {
+      "type": "string",
+      "enum": ["pr", "scheduled", "manual"]
+    },
+
+    "app_type": {
+      "type": "string",
+      "enum": ["traditional", "agentic"]
+    },
+
+    "status": {
+      "type": "string",
+      "description": "Overall run outcome. budget_exhausted is first-class, not an error (design-doc §9).",
+      "enum": ["completed", "budget_exhausted", "error"]
+    },
+
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_steps": { "type": "integer", "minimum": 1 },
+        "max_llm_calls": { "type": "integer", "minimum": 1 },
+        "max_runtime_seconds": { "type": "integer", "minimum": 1 },
+        "max_test_cases": { "type": "integer", "minimum": 1 },
+        "max_retries": { "type": "integer", "minimum": 0 },
+        "max_cost_usd": { "type": "number", "minimum": 0 },
+        "used": {
+          "type": "object",
+          "description": "Actuals, for observability (design-doc §10).",
+          "additionalProperties": false,
+          "properties": {
+            "steps": { "type": "integer", "minimum": 0 },
+            "llm_calls": { "type": "integer", "minimum": 0 },
+            "runtime_seconds": { "type": "number", "minimum": 0 },
+            "test_cases": { "type": "integer", "minimum": 0 },
+            "retries": { "type": "integer", "minimum": 0 },
+            "cost_usd": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "finding.schema.json" }
+    },
+
+    "diff_summary": {
+      "type": "object",
+      "description": "New/known/regression classification against the prior findings.json baseline for this repo (design-doc §16).",
+      "additionalProperties": false,
+      "properties": {
+        "new": { "type": "array", "items": { "type": "string" }, "description": "Finding ids not present in baseline." },
+        "known": { "type": "array", "items": { "type": "string" }, "description": "Finding ids matching baseline, unresolved." },
+        "regression": { "type": "array", "items": { "type": "string" }, "description": "Finding ids previously marked resolved, now reappearing." },
+        "resolved": { "type": "array", "items": { "type": "string" }, "description": "Baseline finding ids not reproduced this run." }
+      }
+    }
+  }
+}
