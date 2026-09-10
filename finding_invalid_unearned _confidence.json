@@ -1,0 +1,24 @@
+{
+  "id": "ARCH-002",
+  "app_type": "agentic",
+  "location": {
+    "category": "orchestration",
+    "component": "retry_manager"
+  },
+  "concerns": ["reliability"],
+  "classification": { "type": "architecture_defect" },
+  "evidence": [
+    "integration test failed with duplicate write"
+  ],
+  "hypotheses": [
+    "retry orchestration caused duplicate execution"
+  ],
+  "investigations": [],
+  "root_cause": {
+    "status": "confirmed",
+    "explanation": "retry orchestration caused duplicate execution"
+  },
+  "severity": "P1",
+  "confidence": 0.9,
+  "verification": { "status": "hypothesis_only" }
+}
