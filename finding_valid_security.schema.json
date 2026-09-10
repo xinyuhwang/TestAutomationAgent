@@ -1,0 +1,32 @@
+{
+  "id": "SEC-017",
+  "app_type": "agentic",
+  "location": {
+    "category": "tooling",
+    "component": "tool_execution",
+    "module": "database_tool"
+  },
+  "concerns": ["security", "reliability"],
+  "control_gap": {
+    "human_in_the_loop": true,
+    "authorization": true
+  },
+  "classification": { "type": "security_issue" },
+  "evidence": [
+    "test reproduced race condition 7/10 times under 20 concurrent requests",
+    "trace_id abc123: SQL executed twice for a single request"
+  ],
+  "hypotheses": [
+    "retry policy may cause duplicate tool invocation"
+  ],
+  "investigations": [
+    "reproduced with retry disabled; duplicate execution disappeared"
+  ],
+  "root_cause": {
+    "status": "confirmed",
+    "explanation": "retry executed before original call's transaction committed"
+  },
+  "severity": "P1",
+  "confidence": 0.91,
+  "verification": { "status": "reproduced" }
+}
