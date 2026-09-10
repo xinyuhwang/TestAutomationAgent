@@ -1,0 +1,16 @@
+{
+  "id": "SEC-018",
+  "app_type": "traditional",
+  "location": {
+    "category": "application",
+    "component": "auth_middleware"
+  },
+  "concerns": ["security"],
+  "classification": { "type": "security_issue" },
+  "evidence": [
+    "observed one request bypass auth header check"
+  ],
+  "verification": { "status": "single_observation" },
+  "severity": "P0",
+  "confidence": 0.95
+}
