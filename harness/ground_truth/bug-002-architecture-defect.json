@@ -1,0 +1,39 @@
+{
+  "fixture_id": "bug-002-architecture-defect",
+  "app_type": "traditional",
+  "description": "Payment capture: PaymentService.charge writes a ledger entry then confirms downstream; charge_with_retry wraps it in the generic retry helper.",
+  "defects": [
+    {
+      "defect_id": "GT-002",
+      "site": {
+        "path": "app/payments.py",
+        "symbol": "charge_with_retry",
+        "lines": [28, 34]
+      },
+      "expected": {
+        "classification_type": ["architecture_defect"],
+        "location_category": ["orchestration", "application"],
+        "concerns": ["reliability", "correctness"],
+        "root_cause_status": ["confirmed"],
+        "min_severity": "P1"
+      },
+      "root_cause_keywords": [
+        ["idempoten", "duplicate", "replay", "twice", "double"],
+        ["retry", "retried", "retries"]
+      ],
+      "notes": "No single line is wrong. charge appends to the ledger *before* calling the gateway, and charge_with_retry retries the whole non-idempotent operation, so a transient gateway failure leaves one ledger entry per attempt. This is the implementation_bug vs architecture_defect discrimination: the fix is a composition change (idempotency key, or ordering the write after confirmation), not a line edit. Existing tests pass because retry is only ever tested with side-effect-free callables and charge is only ever tested against a gateway that never fails."
+    }
+  ],
+  "false_positive_controls": [
+    {
+      "path": "app/retry.py",
+      "symbol": "with_retry",
+      "reason": "Correct in isolation: retries only TransientError, respects the attempt budget, re-raises the last error. The defect is what it is applied to, not the helper itself."
+    },
+    {
+      "path": "app/payments.py",
+      "symbol": "total_charged",
+      "reason": "Correct. It faithfully sums ledger entries; the duplicates it would report are real, not a summing error."
+    }
+  ]
+}

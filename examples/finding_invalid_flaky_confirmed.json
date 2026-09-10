@@ -1,0 +1,28 @@
+{
+  "id": "REL-009",
+  "app_type": "traditional",
+  "location": {
+    "category": "application",
+    "component": "rate_limiter",
+    "path": "app/rate_limiter.py"
+  },
+  "concerns": ["reliability"],
+  "classification": { "type": "flaky_test" },
+  "evidence": [
+    {
+      "repetitions": 20,
+      "failures": 3,
+      "failure_pattern": "fails only above 15 concurrent requests"
+    }
+  ],
+  "investigations": [
+    "reran suite 20x at concurrency 20"
+  ],
+  "root_cause": {
+    "status": "confirmed",
+    "explanation": "rate limiter admits requests out of submission order"
+  },
+  "severity": "P2",
+  "confidence": 0.6,
+  "verification": { "status": "reproduced_intermittently" }
+}

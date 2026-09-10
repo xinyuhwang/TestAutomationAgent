@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  measurement-rails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Validate schemas, examples and ground truth
+        run: python -m harness.validate
+
+      - name: Harness tests
+        run: python -m pytest -q
+
+      # If a fixture's own suite ever fails, the fixture has stopped being a
+      # measurement of the agent: a defect the shipped tests already catch
+      # requires no test generation to find. bug-003 is excluded because its
+      # intermittent test is the fixture's whole point.
+      - name: Fixture suites must pass despite their seeded defects
+        run: |
+          set -e
+          for fixture in bug-001-implementation-bug bug-002-architecture-defect; do
+            echo "--- $fixture"
+            (cd "fixtures/$fixture" && python -m pytest -q)
+          done

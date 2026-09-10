@@ -1,0 +1,3 @@
+# Measurement rails only. Nothing here calls an LLM, so CI runs free and fast.
+jsonschema>=4.18
+pytest>=7.0

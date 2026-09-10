@@ -21,6 +21,12 @@
       "enum": ["traditional", "agentic"]
     },
 
+    "fixture_id": {
+      "type": "string",
+      "description": "Set only when the run targeted a fixture app from the evaluation harness (design-doc §14), so the scorer knows which ground truth to score against. Absent for runs against real repositories.",
+      "minLength": 1
+    },
+
     "status": {
       "type": "string",
       "description": "Overall run outcome. budget_exhausted is first-class, not an error (design-doc §9).",

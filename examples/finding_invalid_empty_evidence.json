@@ -1,0 +1,17 @@
+{
+  "id": "ARCH-014",
+  "app_type": "agentic",
+  "location": {
+    "category": "orchestration",
+    "component": "retry"
+  },
+  "concerns": ["reliability"],
+  "classification": { "type": "architecture_defect" },
+  "evidence": [],
+  "hypotheses": [
+    "the retry wrapper probably replays non-idempotent operations"
+  ],
+  "severity": "P1",
+  "confidence": 0.3,
+  "verification": { "status": "hypothesis_only" }
+}

@@ -1,0 +1,40 @@
+{
+  "fixture_id": "bug-003-flaky-test",
+  "app_type": "traditional",
+  "description": "RateLimiter: a thread-safe, capacity-based admission limiter.",
+  "defects": [
+    {
+      "defect_id": "GT-003",
+      "site": {
+        "path": "tests/test_rate_limiter.py",
+        "symbol": "test_admits_first_arrivals_under_high_concurrency",
+        "lines": [51, 54]
+      },
+      "expected": {
+        "classification_type": ["flaky_test", "test_defect"],
+        "classification_type_preferred": "flaky_test",
+        "location_category": ["evaluation"],
+        "concerns": ["reliability"],
+        "root_cause_status": ["unconfirmed", "inconclusive"],
+        "min_severity": "P3"
+      },
+      "root_cause_keywords": [
+        ["order", "ordering", "sequence", "scheduling", "interleav"],
+        ["not guaranteed", "never promised", "no guarantee", "unspecified", "over-specif", "does not promise"]
+      ],
+      "notes": "The application is correct. The test asserts admission order, which RateLimiter's docstring explicitly does not promise; thread scheduling decides it, so the test fails intermittently above capacity. Measured failure rate is roughly 20% (13/60 locally), but it is timing-dependent and will shift with machine speed and load — so detection must come from repeated runs, never from a single observation. The wrong answer here is a confirmed application defect in RateLimiter, which is why expected.root_cause_status excludes 'confirmed'. This is the §11 discrimination: the agent should say the test fails intermittently under identical inputs and that there is not yet evidence the application behaviour is defective."
+    }
+  ],
+  "false_positive_controls": [
+    {
+      "path": "app/rate_limiter.py",
+      "symbol": "try_acquire",
+      "reason": "Correct and genuinely thread-safe: the capacity check and the append happen under one lock, so the at-most-capacity invariant holds. A finding here is the naive misdiagnosis this fixture exists to catch."
+    },
+    {
+      "path": "app/rate_limiter.py",
+      "symbol": "admitted",
+      "reason": "Correct. Returns a copy under the lock; the varying order it exposes is permitted by the contract."
+    }
+  ]
+}

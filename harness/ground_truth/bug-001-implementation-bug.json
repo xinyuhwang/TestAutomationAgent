@@ -1,0 +1,34 @@
+{
+  "fixture_id": "bug-001-implementation-bug",
+  "app_type": "traditional",
+  "description": "Pagination helpers for a listing endpoint: page_count, slice_page, has_next_page.",
+  "defects": [
+    {
+      "defect_id": "GT-001",
+      "site": {
+        "path": "app/pagination.py",
+        "symbol": "page_count",
+        "lines": [10]
+      },
+      "expected": {
+        "classification_type": ["implementation_bug"],
+        "location_category": ["application"],
+        "concerns": ["correctness"],
+        "root_cause_status": ["confirmed"],
+        "min_severity": "P2"
+      },
+      "root_cause_keywords": [
+        ["floor division", "integer division", "//", "truncat", "rounds down"],
+        ["partial", "remainder", "last page", "final page", "leftover"]
+      ],
+      "notes": "page_count uses floor division, so a partial final page is never counted: page_count(10, 3) returns 3 instead of 4. Because has_next_page derives from page_count, the final partial page becomes unreachable even though slice_page would serve it correctly. Every existing test passes: they only assert exact multiples (9/3, 10/10, 0/10)."
+    }
+  ],
+  "false_positive_controls": [
+    {
+      "path": "app/pagination.py",
+      "symbol": "slice_page",
+      "reason": "Correct. Handles partial final pages and out-of-range pages properly; it is has_next_page's gate that hides them, not this slice."
+    }
+  ]
+}

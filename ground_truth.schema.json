@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/ground-truth.schema.json",
+  "title": "GroundTruth",
+  "description": "The seeded defects in one fixture app, plus what a correct finding about each would have to say. Read only by the scoring harness — never exposed to the agent under evaluation (design-doc §14).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fixture_id", "app_type", "defects"],
+  "properties": {
+    "fixture_id": {
+      "type": "string",
+      "description": "Directory name of the fixture, e.g. 'bug-001-implementation-bug'.",
+      "minLength": 1
+    },
+
+    "app_type": {
+      "type": "string",
+      "enum": ["traditional", "agentic"]
+    },
+
+    "description": {
+      "type": "string",
+      "description": "What the app is supposed to do. Safe to show a human reading results; not given to the agent.",
+      "minLength": 1
+    },
+
+    "defects": {
+      "type": "array",
+      "description": "Seeded defects. Usually exactly one per fixture, so that a miss is unambiguous.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["defect_id", "site", "expected"],
+        "properties": {
+          "defect_id": {
+            "type": "string",
+            "pattern": "^GT-[0-9]+$"
+          },
+
+          "site": {
+            "type": "object",
+            "description": "Where the defect actually is. The scorer matches a finding to this defect by path, then by symbol.",
+            "additionalProperties": false,
+            "required": ["path", "symbol"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "symbol": { "type": "string", "minLength": 1 },
+              "lines": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 1 },
+                "minItems": 1,
+                "maxItems": 2
+              }
+            }
+          },
+
+          "expected": {
+            "type": "object",
+            "description": "What a correct finding must say. Each axis is scored independently, mirroring the finding schema's separation of axes (design-doc §11).",
+            "additionalProperties": false,
+            "required": ["classification_type", "location_category", "concerns"],
+            "properties": {
+              "classification_type": {
+                "type": "array",
+                "description": "Acceptable values. A list rather than a single value because the taxonomy has genuine overlap (e.g. an over-specified assertion is arguably both flaky_test and test_defect) — design-doc §17.",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "implementation_bug",
+                    "architecture_defect",
+                    "flaky_test",
+                    "test_defect",
+                    "security_issue"
+                  ]
+                }
+              },
+              "classification_type_preferred": {
+                "type": "string",
+                "description": "The single best answer, when the acceptable list has more than one. Reported separately so taxonomy ambiguity is measured rather than hidden.",
+                "enum": [
+                  "implementation_bug",
+                  "architecture_defect",
+                  "flaky_test",
+                  "test_defect",
+                  "security_issue"
+                ]
+              },
+              "location_category": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "agent_loop",
+                    "orchestration",
+                    "evaluation",
+                    "tooling",
+                    "application",
+                    "data",
+                    "infrastructure"
+                  ]
+                }
+              },
+              "concerns": {
+                "type": "array",
+                "description": "Concerns the finding must include. Extra concerns beyond these are not penalised; missing ones are.",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "reliability",
+                    "security",
+                    "observability",
+                    "latency",
+                    "cost",
+                    "correctness",
+                    "safety"
+                  ]
+                }
+              },
+              "root_cause_status": {
+                "type": "array",
+                "description": "Acceptable root_cause.status values. For a flaky-test fixture this deliberately excludes 'confirmed' — confirming an application defect there is a wrong answer, not a strong one.",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "enum": ["confirmed", "unconfirmed", "inconclusive"]
+                }
+              },
+              "min_severity": {
+                "type": "string",
+                "description": "Least severe acceptable rating. P0 is most severe, so 'P2' accepts P0/P1/P2.",
+                "enum": ["P0", "P1", "P2", "P3"]
+              }
+            }
+          },
+
+          "root_cause_keywords": {
+            "type": "array",
+            "description": "Groups of synonyms. A group is satisfied if ANY of its strings appears (case-insensitive) in the finding's root_cause.explanation; root cause counts as correct only if ALL groups are satisfied. Grouping avoids demanding exact phrasing while still requiring the right mechanism.",
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "default": []
+          },
+
+          "notes": {
+            "type": "string",
+            "description": "Why this defect is non-trivial to find — e.g. which existing tests pass despite it.",
+            "minLength": 1
+          }
+        }
+      }
+    },
+
+    "false_positive_controls": {
+      "type": "array",
+      "description": "Paths/symbols in this fixture that are deliberately correct. A finding anchored here is counted a false positive, which is how §14's 'avoid false positives on the other fixtures' becomes measurable.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "symbol": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      },
+      "default": []
+    }
+  }
+}

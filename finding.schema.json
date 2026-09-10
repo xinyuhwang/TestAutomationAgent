@@ -56,6 +56,23 @@
           "type": "string",
           "description": "Optional finer-grained module/file, e.g. 'database_tool'.",
           "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "description": "Repo-relative file path the finding anchors to, e.g. 'app/pagination.py'. Optional because architecture defects may span files, but the ground-truth scorer matches on it when present — a finding without a path can only be matched by symbol/keyword fallback.",
+          "minLength": 1
+        },
+        "symbol": {
+          "type": "string",
+          "description": "Function/class/method the finding anchors to, e.g. 'page_count'. Used by the scorer as fallback when path is absent or does not match.",
+          "minLength": 1
+        },
+        "lines": {
+          "type": "array",
+          "description": "Single line [n] or inclusive range [start, end] within path.",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 1,
+          "maxItems": 2
         }
       }
     },
